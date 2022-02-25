@@ -232,7 +232,7 @@ def circuit_optimization(n_qubits, n_layers, tn, optimizer, composer):
         else:
             with open(matched_max_wait_time_dir, 'rb') as peo_dir:
                 peo = pickle.load(peo_dir)
-                print('Using previously saved contraction order at ', peo_dir)
+                #print('Using previously saved contraction order at ', peo_dir)
 
     # Searching for other optimizer types
     else:
@@ -241,7 +241,7 @@ def circuit_optimization(n_qubits, n_layers, tn, optimizer, composer):
         if os.path.isfile(target_file_dir):
             with open(target_file_dir, 'rb') as peo_dir:
                 peo = pickle.load(peo_dir)
-                print('Using previously saved contraction order at ', peo_dir)
+                #print('Using previously saved contraction order at ', peo_dir)
         else:
             if not os.path.isdir(begin_dir):
                 os.makedirs(begin_dir)

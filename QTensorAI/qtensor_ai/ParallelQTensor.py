@@ -94,6 +94,7 @@ from qtensor.tools.lazy_import import torch
 import qtree
 from qtree.utils import num_to_alpha
 import numpy as np
+import gc
 
 def get_einsum_expr(idx1, idx2):
     """
@@ -123,6 +124,42 @@ def get_einsum_expr(idx1, idx2):
     str2 = ''.join(num_to_alpha(idx_to_least_idx[ii]) for ii in idx2)
     str3 = ''.join(num_to_alpha(idx_to_least_idx[ii]) for ii in result_indices)
     return 'Z' + str1 + ',' + 'Z' + str2 + '->' + 'Z' + str3
+
+def bucket_elimination(buckets, process_bucket_fn,
+                       n_var_nosum=0):
+
+    n_var_contract = len(buckets) - n_var_nosum
+
+    result = None
+    for n, bucket in enumerate(buckets[:n_var_contract]):
+        if len(bucket) > 0:
+            tensor = process_bucket_fn(bucket)
+            for used_tensor in bucket:
+                used_tensor._data = None
+            if len(tensor.indices) > 0:
+                # tensor is not scalar.
+                # Move it to appropriate bucket
+                first_index = int(tensor.indices[0])
+                buckets[first_index].append(tensor)
+            else:   # tensor is scalar
+                if result is not None:
+                    result *= tensor
+                else:
+                    result = tensor
+            del tensor
+            #gc.collect()
+            torch.cuda.empty_cache()
+
+    # form a single list of the rest if any
+    rest = list(itertools.chain.from_iterable(buckets[n_var_contract:]))
+    if len(rest) > 0:
+        # only multiply tensors
+        tensor = process_bucket_fn(rest, no_sum=True)
+        if result is not None:
+            result *= tensor
+        else:
+            result = tensor
+    return result
 
 from qtensor.contraction_backends import ContractionBackend
 from qtensor.contraction_backends.torch import qtree2torch_tensor
@@ -166,6 +203,7 @@ class ParallelTorchBackend(ContractionBackend):
         else:
             result = qtree.optimizer.Tensor(f'E{tag}', result_indices,
                                 data=torch.sum(result_data, axis=1))
+
         return result
 
     def get_sliced_buckets(self, buckets, data_dict, slice_dict):
@@ -893,6 +931,12 @@ class RPQCComposer(ParallelTorchQkernelComposer):
     def __init__(self, n_qubits):
         super().__init__(n_qubits)
 
+    def layer_of_Hadamard_roots(self):
+        alpha = (1/4)*torch.ones(self.n_batch).to(self.device)
+        for i in range(self.n_qubits):
+            qubit = self.qubits[i]
+            self.apply_gate(self.operators.YPhase, qubit, alpha=alpha, n_batch=self.n_batch, device=self.device, is_placeholder = self.expectation_circuit_initialized)
+
     def variational_layer(self, layer_gate_types, layer_params):
         for i in range(self.n_qubits):
             qubit = self.qubits[i]
@@ -904,7 +948,8 @@ class RPQCComposer(ParallelTorchQkernelComposer):
         '''params is a np.ndarray that has dimension (n_batch, n_qubits, layers). It stores rotation angles'''
         self.n_batch = params.shape[0]
         self.layers = params.shape[2]
-        self.layer_of_Hadamards()
+        self.device = params.device
+        self.layer_of_Hadamard_roots()
         for layer in range(self.layers):
             layer_gate_types = gate_types[:, :, layer]
             layer_params = params[:, :, layer]
@@ -1204,7 +1249,7 @@ class ParallelQtreeSimulator(QtreeSimulator):
 
     def simulate_batch(self, qc, batch_vars=0, peo=None):
         self.prepare_buckets(qc, batch_vars, peo)
-        result = qtree.optimizer.bucket_elimination(
+        result = bucket_elimination(
             self.buckets, self.backend.process_bucket,
             n_var_nosum=len(self.tn.free_vars)
         )
