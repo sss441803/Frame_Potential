@@ -184,7 +184,7 @@ def trace_generation(directory, k):
         for n_layers in [4,5,6,7,8,9,10,12,14]:#,150,200,250,300,400,500]:
             if (mean+2*std < 1.5*haar_frame_potential):
                 break
-            pru = PRU_trace(n_qubits, n_layers, optimizer=TamakiOptimizer(wait_time=2**min(n_qubits, n_layers)))
+            pru = PRU_trace(n_qubits, n_layers, optimizer=TamakiOptimizer(wait_time=1))
 
             iteration = 0
             trying = True
