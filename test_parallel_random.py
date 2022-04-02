@@ -177,14 +177,14 @@ def trace_generation(directory, k):
         device = 'cuda'
 
     haar_frame_potential = math.factorial(k)
-    for n_qubits in [14,16,18,20,24,28,32,36,40,44,48]:
+    for n_qubits in [2,4,6,8,10,12,14,16,18,20,24,28,32,36,40,44,48]:
         n_batch = 1600000//n_qubits
         mean = haar_frame_potential
         std = haar_frame_potential
         for n_layers in [4,5,6,7,8,9,10,12,14]:#,150,200,250,300,400,500]:
             if (mean+2*std < 1.5*haar_frame_potential):
                 break
-            pru = PRU_trace(n_qubits, n_layers, optimizer=TamakiOptimizer(wait_time=1))
+            pru = PRU_trace(n_qubits, n_layers, optimizer=TamakiOptimizer(wait_time=min(2**min(n_qubits,n_layers), 1500)))
 
             iteration = 0
             trying = True
@@ -198,7 +198,7 @@ def trace_generation(directory, k):
                     try:
                         results = torch.load(file)
                         break
-                    except EOFError:
+                    except (EOFError, RuntimeError):
                         time.sleep(1)
 
             while trying:
@@ -214,11 +214,22 @@ def trace_generation(directory, k):
                     if results.shape[0] == 0:
                         mean = haar_frame_potential
                         std = haar_frame_potential
-
-                    iteration = 0
                     
                     while True:
-                        if (mean-2*std > haar_frame_potential):
+
+                        if (iteration == 200):
+                            break
+                        if (mean-2*std > 1.5*haar_frame_potential):
+                            break
+                        if (mean+2*std < 1.5*haar_frame_potential) and (mean > haar_frame_potential):
+                            break
+                        if (mean == np.inf):
+                            break
+                        if (mean == np.nan):
+                            break
+                        if (std == np.inf):
+                            break
+                        if (std == np.nan):
                             break
                         
                         unitaries = pru.layer_random_unitaries(device, n_batch)
@@ -255,7 +266,6 @@ def trace_generation(directory, k):
                             n_batch = int(n_batch*1.1)
 
                     print('Experiment for n={} and l={} is over.'.format(n_qubits, n_layers))
-                    print('Saving. At iteration {}, the mean is {}, and the standard deviation of the mean is {}. The frame potential of a {} design is {}'.format(iteration, mean, std, k, haar_frame_potential))
                     torch.save(results, directory + '/n_{}_l_{}.pt'.format(n_qubits, n_layers))
                     trying = False
 
@@ -265,7 +275,7 @@ def trace_generation(directory, k):
                     if not mostly_settled:
                         n_batch //= 2
                     else:
-                        n_batch = old_n_batch
+                        n_batch = int(n_batch//1.1)
                         settled = True
                         print('Settled batch size is ', n_batch)
                     if n_batch == 0:
@@ -304,9 +314,9 @@ def frame_potential(results_dir: str):
 
 
 def peo_finder():
-    for n_layers in [12,14,16,18,20]:
-        for n_qubits in [24,28]:
-            optimizer = TamakiOptimizer(wait_time=1500)
+    for n_layers in [13]:
+        for n_qubits in [2,4,6,8,10,12,14,16,18,20,24,28,32,36,40,44,48]:
+            optimizer = TamakiOptimizer(wait_time=min(2**min(n_qubits,n_layers), 1500))
             circuit_name = 'PRU_trace_n_{}_l_{}'.format(n_qubits, n_layers)
             PRU_composer = ParallelRandomUnitaryComposer(n_qubits, n_layers)
             composer = TraceEvaluationComposer(n_qubits, PRU_composer)
@@ -349,7 +359,7 @@ args = vars(parser.parse_args())
 
 if __name__ == '__main__':
     if args['mode'] == 'trace_generation':
-        trace_generation(directory = './results/PRU/', k=3)
+        trace_generation(directory = './results/PRU/', k=4)
     elif args['mode'] == 'frame_potential':
         frame_potential(results_dir = './results/PRU/')
     elif args['mode'] == 'test':
