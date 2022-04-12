@@ -53,7 +53,7 @@ class ParallelRandomUnitaryComposer(ParallelComposer):
             unitary = layer_unitaries[:, i]
             self.apply_gate(self.operators.RandU, qubit1, qubit2, alpha=unitary)
 
-    def random_circuit_odd_layer(self,layer_unitaries):
+    def random_circuit_odd_layer(self, layer_unitaries):
         for i in range((self.n_qubits+1)//2-1):
             qubit1 = self.qubits[2*i+1]
             qubit2 = self.qubits[2*i+2]
