@@ -8,9 +8,9 @@ args = vars(parser.parse_args())
 
 if __name__ == '__main__':
     if args['mode'] == 'trace_generation':
-        trace_generation(directory = '../results/PRU/', k=4, threshold=1.01)
+        trace_generation(directory = '../results/Parameterized_PRU/', k=4, threshold=1.01)
     elif args['mode'] == 'frame_potential':
-        frame_potential(results_dir = '../results/PRU/')
+        frame_potential(results_dir = '../results/Parameterized_PRU/')
     #elif args['mode'] == 'train_PRU':
     #    train_PRU()
     elif args['mode'] == 'peo_finder':

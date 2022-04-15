@@ -14,6 +14,8 @@ from qtensor_ai import ParallelComposer, HybridModule, DefaultOptimizer, TamakiO
 from qtensor_ai.TensorNet import ParallelTensorNet
 from qtensor_ai.Hybrid_Module import circuit_optimization
 
+from eunn import Unitary
+
 
 class RandU(ParallelParametricGate):
     name = 'Rand'
@@ -131,12 +133,7 @@ class PRU_trace(HybridModule):
 
     @staticmethod
     def random_unitary_generator(n_batch, counts):
-        module = nn.Linear(1,1)
-        module.unitary = nn.Parameter(torch.rand(n_batch, counts, 2**2, 2**2, dtype=torch.cfloat))
-        orthmod = nn.utils.parametrizations.orthogonal(module, name='unitary')
-        results = orthmod.unitary.reshape(n_batch, 1, counts, 2,2,2,2).detach()
-        results = torch.permute(results, (0,1,2,3,5,4,6))
-        return results
+        return Unitary(n_batch * counts)().reshape(n_batch, 1, counts, 2,2,2,2).detach()
 
     @classmethod
     def even_layer_random_unitaries(cls, n_batch, n_qubits):
@@ -185,7 +182,7 @@ def retrieve_batch_sizes(max_n, max_l, n, l, directory):
         batch_sizes = np.zeros((max_n, max_l, 2), dtype=int)
         for n in range(1, max_n+1):
             for l in range(1, max_l+1):
-                batch_sizes[n-1, l-1, 0] = int(160000//min(n, l))
+                batch_sizes[n-1, l-1, 0] = int(1600000//min(n, l))
         np.save(directory, batch_sizes)
             
     '''Decide what batch size to try'''
@@ -241,14 +238,14 @@ def trace_generation(directory, k, threshold):
 
     haar_frame_potential = math.factorial(k)
 
-    for n_qubits in [4,6,8,10,12,14,16,18,20,24,28,32,36,40,44,48]:
+    for n_qubits in [2,4,6,8,10,12,14,16,18,20,24,28,32,36,40,44,48]:
 
         mean = None
         std = None
         previous_mean = None
         previous_std = None
 
-        for n_layers in [4,5,6,7,8,9,10,11,12,13,14]:#,150,200,250,300,400,500]:
+        for n_layers in [1,2,3,4,5,6,7,8,9,10,11,12,13,14]:#,150,200,250,300,400,500]:
             '''Stop if error is smaller than threshold'''
             if mean != None:
                 if (mean+2*std < threshold*haar_frame_potential):
@@ -346,7 +343,7 @@ def trace_generation(directory, k, threshold):
                         if status in (1, 2):
                             update_batch_sizes(n_batch, status, n_qubits, n_layers, batch_sizes_dir)
 
-                    print('Experiment for n={} and l={} is over. Mean: {}; std: {}.'.format(n_qubits, n_layers, mean, std))
+                    print('Experiment for n={} and l={} is over.'.format(n_qubits, n_layers))
                     torch.save(results, directory + '/n_{}_l_{}.pt'.format(n_qubits, n_layers))
                     previous_mean = mean
                     previous_std = std
