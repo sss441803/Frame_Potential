@@ -5,4 +5,4 @@ Saved_Contraction_Orders/
 .ipynb_checkpoints/
 *.slurm
 *.out
-/results/
+*.pt
