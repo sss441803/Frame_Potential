@@ -9,4 +9,20 @@ The numerical scheme uses the QTensorAI library, based on the quantum simulator 
 
 The code base requires the QTensorAI library, available at https://github.com/sss441803/QTensorAI.git. We recommend a separate environment for data analysis to avoid potential conflicts with scipy and other libraries. The data analysis environment requires scipy, numpy, matplotlib and uncertainties.
 
-Each circuit ansatze has its own folder of code for simulation. Results are in the `/results` folder, and respective ansatze directories with a `frame_potential.npy` file.
+To run simulations for the parallel random unitary or the hardware efficient ansatze, first run the following lines to pre-compute the contraction orders on a CPU system:
+```bash
+cd scripts
+python run.py --mode peo_finder
+```
+After that, run the following lines to execute the actual simulation:
+```bash
+python run.py --mode simulation
+```
+To calculate the frame potential from the simulation trace results, run:
+```bash
+python run.py --mode frame_potential
+```
+The implementation of the local random unitary ansatze is CPU based. To run it, you need to move to the directory `\scripts\Local_Random`, and run the `run.py` file similarly like before. No need to run the `peo_finder` mode because we will NOT optimize the contraction order (they will be all different for each random circuit).
+
+
+Results are in the `/results` folder, and respective ansatze directories with a `frame_potential.npy` file.
