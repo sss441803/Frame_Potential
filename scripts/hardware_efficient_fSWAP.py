@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 import qtensor_ai
-from qtensor_ai.OpFactory import ParallelParametricGate, ParallelTorchFactory
+from qtensor_ai.OpFactory import ParallelGate, ParallelParametricGate, ParallelTorchFactory
 from qtensor_ai import ParallelComposer, HybridModule, DefaultOptimizer, TamakiOptimizer
 from qtensor_ai.TensorNet import ParallelTensorNet
 from qtensor_ai.Hybrid_Module import circuit_optimization
@@ -50,13 +50,20 @@ class PauliPhase(ParallelParametricGate):
 
 
 # Fermion SWAP gate
-class fSWAP(ParallelParametricGate):
+class fSWAP(ParallelGate):
     name = 'fSWAP'
     _changes_qubits=(0, 1)
 
-    @staticmethod
-    def _gen_tensor(**parameters):
-        return parameters['alpha']
+    def __init__(self, *qubits, **parameters):
+        device = parameters['device']
+        is_placeholder = parameters['is_placeholder']
+        if not is_placeholder:
+            self.tensor = torch.tensor([[[[1, 0], [0, 0]],[[0, 0], [1, 0]]],
+                                        [[[0, 1], [0, 0]],[[0, 0], [0, -1]]]]).to(device)
+        super().__init__(*qubits, **parameters)
+
+    def _gen_tensor(self, **parameters):
+        return self.tensor.repeat(self._parameters['n_batch'],1,1,1,1)
 
     def gen_tensor(self, **parameters):
         if len(parameters) == 0:
@@ -68,14 +75,10 @@ class fSWAP(ParallelParametricGate):
             tensor = torch.permute(tensor, [0,2,1,4,3]).conj()
         return tensor
 
-    def __str__(self):
-        return ("{}".format(self.name) +
-                "({})".format(','.join(map(str, self._qubits)))
-        )
-
 
 # Adding the random pauli rotation gate to the family of gates in the factory
 ParallelTorchFactory.PauliPhase = PauliPhase
+ParallelTorchFactory.fSWAP = fSWAP
 
 
 # Circuit composer to automatically generate random parameterized circuits for the 
@@ -99,11 +102,11 @@ class HardwareEfficientComposer(ParallelComposer):
         for i in range(self.n_qubits//2):
             control_qubit = 2*i
             target_qubit = 2*i+1
-            self.apply_gate(self.operators.cX, control_qubit, target_qubit)
+            self.apply_gate(self.operators.fSWAP, control_qubit, target_qubit)
         for i in range((self.n_qubits+1)//2-1):
             control_qubit = 2*i+1
             target_qubit = 2*i+2
-            self.apply_gate(self.operators.cX, control_qubit, target_qubit)
+            self.apply_gate(self.operators.fSWAP, control_qubit, target_qubit)
 
     # adding circuit that needs to be measured to self.builder.circuit'''
     def circuit(self, gate_types, params):
@@ -132,7 +135,7 @@ class HardwareEfficientComposer(ParallelComposer):
         return first_part + second_part
 
     def name():
-        return 'Hardware_Efficient'
+        return 'Hardware_Efficient_fSWAP'
 
     # class method for generating random parameters and basis for the random pauli rotation gates
     @staticmethod

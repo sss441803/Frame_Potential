@@ -107,7 +107,7 @@ class HardwareEfficientComposer(ParallelComposer):
         return first_part + second_part
 
     def name():
-        return 'Hardware_Efficient'
+        return 'Hardware_Efficient_cZ'
 
     # class method for generating random parameters and basis for the random pauli rotation gates
     @staticmethod
