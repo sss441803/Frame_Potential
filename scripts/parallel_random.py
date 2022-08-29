@@ -169,7 +169,7 @@ def trace_gen(device, n_batch, n_qubits, n_layers):
     need_new_mod = False
     if not 'previous_n_qubits' in globals():
         need_new_mod = True
-    elif previous_n_qubits != n_qubits and previous_n_layers!= n_layers:
+    elif previous_n_qubits != n_qubits or previous_n_layers!= n_layers:
         need_new_mod = True
     if need_new_mod:
         # Initialize quantum circuit trace evaluation module

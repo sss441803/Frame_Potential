@@ -10,7 +10,7 @@ from qtensor_ai.Hybrid_Module import circuit_optimization
 from trace_eval_circuit_composer import TraceEvaluationComposer
 
 
-ansatze_name = 'Hardware_Efficient'
+ansatze_name = 'Hardware_Efficient_fSWAP'
 n_qubits_list = [2,4,6,8,10,12,14,16,18,20,24,28,32,36,40,44,48,50]
 n_layers_list = [[4,5,6,7,8,9,10,11,12,13,14]]*max(n_qubits_list)
 
@@ -47,6 +47,31 @@ class PauliPhase(ParallelParametricGate):
         c = torch.cos(np.pi*alpha/2).unsqueeze(1)[:,None]*self.ct
         s = torch.sin(np.pi*alpha/2).unsqueeze(1)[:,None]*torch.index_select(self.st, 0, gates)
         return c + s
+
+
+# Fermion SWAP gate
+class fSWAP(ParallelParametricGate):
+    name = 'fSWAP'
+    _changes_qubits=(0, 1)
+
+    @staticmethod
+    def _gen_tensor(**parameters):
+        return parameters['alpha']
+
+    def gen_tensor(self, **parameters):
+        if len(parameters) == 0:
+            tensor = self._gen_tensor(**self._parameters)
+        # implementing the adjoint (adjoint operation is usually taken care of
+        # by the ParallelParametricGate class but here the default way doesn't work
+        # and had to be implemented here because 4x4 unitaries are first used here)
+        if self.is_inverse:
+            tensor = torch.permute(tensor, [0,2,1,4,3]).conj()
+        return tensor
+
+    def __str__(self):
+        return ("{}".format(self.name) +
+                "({})".format(','.join(map(str, self._qubits)))
+        )
 
 
 # Adding the random pauli rotation gate to the family of gates in the factory
@@ -110,8 +135,8 @@ class HardwareEfficientComposer(ParallelComposer):
         return 'Hardware_Efficient'
 
     # class method for generating random parameters and basis for the random pauli rotation gates
-    @classmethod
-    def param_generator(cls, device, n_batch, n_qubits, n_layers):
+    @staticmethod
+    def param_generator(device, n_batch, n_qubits, n_layers):
 
         # initializing random pauli rotation gate parameters
         params1 = 2*torch.rand(n_batch, n_qubits, n_layers, requires_grad=False).to(device)-1
@@ -129,7 +154,7 @@ class HardwareEfficientComposer(ParallelComposer):
 class HE_trace_mod(HybridModule):
 
     def __init__(self, n_qubits, n_layers, optimizer=DefaultOptimizer):
-        circuit_name = 'HE_trace_n_{}_l_{}'.format(n_qubits, n_layers)
+        circuit_name = 'HE_fSWAP_trace_n_{}_l_{}'.format(n_qubits, n_layers)
         self.n_qubits = n_qubits
         self.n_layers = n_layers
         HE_composer = HardwareEfficientComposer(n_qubits, n_layers)
@@ -149,7 +174,7 @@ def trace_gen(device, n_batch, n_qubits, n_layers):
     need_new_mod = False
     if not 'previous_n_qubits' in globals():
         need_new_mod = True
-    elif previous_n_qubits != n_qubits and previous_n_layers!= n_layers:
+    elif previous_n_qubits != n_qubits or previous_n_layers!= n_layers:
         need_new_mod = True
     if need_new_mod:
         # Initialize quantum circuit trace evaluation module
@@ -171,7 +196,7 @@ def peo_finder():
     for n_qubits in n_qubits_list:
         for n_layers in n_layers_list[n_qubits]:
             optimizer = TamakiOptimizer(wait_time=min(2**min(n_qubits, n_layers), 1500))
-            circuit_name = 'HE_trace_n_{}_l_{}'.format(n_qubits, n_layers)
+            circuit_name = 'HE_fSWAP_trace_n_{}_l_{}'.format(n_qubits, n_layers)
             HE_composer = HardwareEfficientComposer(n_qubits, n_layers)
             composer = TraceEvaluationComposer(n_qubits, HE_composer)
             parameters = HardwareEfficientComposer.param_generator('cpu', 1, n_qubits, n_layers)

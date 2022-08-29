@@ -1,6 +1,6 @@
 import argparse
 
-from parallel_random import ansatze_config, trace_gen, peo_finder
+from hardware_efficient_cZ import ansatze_config, trace_gen, peo_finder
 from functions import simulation, frame_potential
 
 parser = argparse.ArgumentParser()

@@ -45,7 +45,7 @@ def simulation(ansatze_config, trace_gen, k, threshold):
         for n_layers in n_layers_list[n_qubits]:
             
             # knowing what batch size to use and whether or not to try larger or smaller batch sizes
-            n_batch, status = retrieve_batch_sizes(50, 14, n_qubits, n_layers,batch_sizes_file)
+            n_batch, status = retrieve_batch_sizes(50, 14, n_qubits, n_layers, batch_sizes_file)
             # Stop if error is smaller than threshold. This is when the estimate is confidently close enough to the Haar value
             if mean != None:
                 if (mean+2*std < threshold*haar_frame_potential):
@@ -125,7 +125,7 @@ def simulation(ansatze_config, trace_gen, k, threshold):
                                     break
                         
                         # update what batch size to try. May have changed from other jobs or previous attempts
-                        n_batch, status = retrieve_batch_sizes(50, 14, n_qubits, n_layers,batch_sizes_file)
+                        n_batch, status = retrieve_batch_sizes(50, 14, n_qubits, n_layers, batch_sizes_file)
                         if status == 1:
                             print('Trying batch size ', n_batch)
                         
@@ -186,6 +186,7 @@ def simulation(ansatze_config, trace_gen, k, threshold):
 def frame_potential(ansatze_config):
 
     ansatze_name = ansatze_config['ansatze_name']
+    results_dir = "../results/" + ansatze_name
     
     max_ns = 50
     max_l = 14
