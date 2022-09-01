@@ -1,4 +1,5 @@
 import torch
+from sklearn.utils import resample
 
 import numpy as np
 import math
@@ -186,7 +187,7 @@ def simulation(ansatze_config, trace_gen, k, threshold):
 def frame_potential(ansatze_config):
 
     ansatze_name = ansatze_config['ansatze_name']
-    results_dir = "../results/" + ansatze_name
+    results_dir = "../results/" + ansatze_name + '/'
     
     max_ns = 50
     max_l = 14
@@ -220,3 +221,52 @@ def frame_potential(ansatze_config):
                     print('File skipped')
     frame_potential = frame_potential.numpy()
     np.save(results_dir + '/frame_potential', frame_potential)
+
+
+# (With bootstrapping) Function that calculates frame potentials for different k values and saves the results
+def bootstrapped_frame_potential(ansatze_config):
+
+    ansatze_name = ansatze_config['ansatze_name']
+    results_dir = "../results/" + ansatze_name + '/'
+    
+    max_ns = 50
+    max_l = 14
+    max_k = 5
+    bootstrap_samples = 300
+    # Since not all qubit numbers are calculated, such entries will have value nan
+    frame_potential = np.zeros((max_ns, max_l, max_k, bootstrap_samples, 2))
+    frame_potential[:,:,:,:,:] = np.nan
+    samples_array = np.zeros((max_ns, max_l))
+
+    # regular expression matching all files that contain trace values
+    files = os.listdir('../results/' + ansatze_name)
+    n_pattern = re.compile(r'n_\d*')
+    l_pattern = re.compile(r'l_\d*')
+    for file in files:
+        n_match = n_pattern.findall(file)
+        if len(n_match) != 0:
+            n = int(n_match[0][2:])
+            l_match = l_pattern.findall(file)
+            l = int(l_match[0][2:])
+            tensor = torch.load(results_dir + file)
+            tensor = tensor[~tensor.isinf()]
+            samples = tensor.shape[0]
+            samples_array[n-1][l-1] = samples
+            for k in range(1, max_k+1):
+                power = tensor**(2*k)
+                #mean, std = power.mean(), power.std()/np.sqrt(samples)
+                #print(n,l,k, mean, std)
+                print("n, l, k: ", n, l, k)
+                try:
+                    for i in range(bootstrap_samples):
+                        sampled_power = resample(power.numpy(), n_samples=samples)
+                        mean = sampled_power.mean().item()
+                        std = sampled_power.std().item()/np.sqrt(samples)
+                        frame_potential[n-1][l-1][k-1][i][0] = mean
+                        frame_potential[n-1][l-1][k-1][i][1] = std
+                        #print('Mean, std: ', mean, std)
+                # If the file is outside what is asked for by the frame potential array
+                except IndexError:
+                    print('File skipped')
+    np.save(results_dir + '/bootstrapped_frame_potential', frame_potential)
+    np.save(results_dir + '/samples_array', samples_array)
