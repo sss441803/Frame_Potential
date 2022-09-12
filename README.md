@@ -20,9 +20,9 @@ python run.py --mode simulation
 ```
 To calculate the frame potential from the simulation trace results, run:
 ```bash
-python run.py --mode frame_potential
+python run.py --mode bootstrapped_frame_potential
 ```
-The implementation of the local random unitary ansatze is CPU based. To run it, you need to move to the directory `\scripts\Local_Random`, and run the `run.py` file similarly like before. No need to run the `peo_finder` mode because we will NOT optimize the contraction order (they will be all different for each random circuit).
+The implementation of the local random unitary ansatze is CPU based. To run it, you need to run the `run_local.py` file similarly like before. No need to run the `peo_finder` mode because we will NOT optimize the contraction order (they will be all different for each random circuit).
 
 
-Results are in the `/results` folder, and respective ansatze directories with a `frame_potential.npy` file.
+Results are in the `/results` folder, and respective ansatze directories with a `bootstrapped_frame_potential.npy` file.
