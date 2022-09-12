@@ -6,3 +6,7 @@ Saved_Contraction_Orders/
 *.slurm
 *.out
 *.pt
+*.svg
+*.pdf
+*.npy
+*.pt

@@ -46,7 +46,7 @@ def retrieve_batch_sizes(max_n, max_l, n, l, directory):
     n_batch = batch_sizes[n-1, l-1, 0]
     status = batch_sizes[n-1, l-1, 1]
 
-    return int(min(n_batch, 100000)), int(status)
+    return int(min(n_batch, 1000000)), int(status)
 
 
 # Update the batch size, status

@@ -16,8 +16,10 @@ from trace_eval_circuit_composer import TraceEvaluationComposer
 from eunn import Unitary
 
 ansatze_name = 'Parallel_Random'
-n_qubits_list = [2,4,6,8,10,12,14,16,18,20,24,28,32,36,40,44,48,50]
-n_layers_list = [[4,5,6,7,8,9,10,11,12,13,14]]*max(n_qubits_list)
+#n_qubits_list = [2,4,6,8,10,12,14,16,18,20,24,28,32,36,40,44,48,50]
+#n_layers_list = [[4,5,6,7,8,9,10,11,12,13,14]]*(max(n_qubits_list)+1)
+n_qubits_list = [2]
+n_layers_list = [[1]]*(max(n_qubits_list)+1)
 
 ansatze_config = {
                 'ansatze_name': ansatze_name,

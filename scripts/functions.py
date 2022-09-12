@@ -248,7 +248,9 @@ def bootstrapped_frame_potential(ansatze_config):
             n = int(n_match[0][2:])
             l_match = l_pattern.findall(file)
             l = int(l_match[0][2:])
-            tensor = torch.load(results_dir + file)
+            loaded_tensor = torch.load(results_dir + file)
+            tensor = loaded_tensor[:min(loaded_tensor.shape[0], 100000)]
+            del loaded_tensor
             tensor = tensor[~tensor.isinf()]
             samples = tensor.shape[0]
             samples_array[n-1][l-1] = samples
